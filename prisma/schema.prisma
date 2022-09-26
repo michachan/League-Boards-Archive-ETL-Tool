@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Application {
+  id            String       @id @db.VarChar(20)
+  name          String       @db.VarChar(100)
+  locale        String       @db.VarChar(10)
+  description   String?      @db.VarChar
+  shortName     String       @unique @db.VarChar(50)
+  stickiedPosts Json?        @default("[]")
+  totalPosts    Int?         @default(0)
+  Discussions   Discussion[]
+
+  @@map("Applications")
+}
+
+model Comment {
+  id          String     @db.VarChar
+  threadId    String     @db.VarChar(15)
+  message     String     @db.VarChar
+  userId      String
+  parentId    String?    @db.VarChar
+  createdAt   DateTime   @db.Timestamptz(6)
+  modifiedAt  DateTime?  @db.Timestamptz(6)
+  upvotes     Int        @default(0)
+  downvotes   Int        @default(0)
+  numChildren Int?
+  Discussion  Discussion @relation(fields: [threadId], references: [id])
+  Users       User       @relation(fields: [userId], references: [id])
+  Content     Content[]
+
+  @@id([threadId, id])
+  @@index([threadId], type: Hash)
+  @@index([createdAt], map: "Comments_CreatedAt_Index")
+  @@map("Comments")
+}
+
+model Discussion {
+  id                String      @id @db.VarChar(15)
+  title             String      @db.VarChar(300)
+  applicationId     String      @db.VarChar(20)
+  userId            String?
+  upvotes           Int         @default(0)
+  downvotes         Int         @default(0)
+  viewCount         Int?
+  softComments      Int?
+  totalComments     Int?
+  createdAt         DateTime    @db.Timestamptz(6)
+  modifiedAt        DateTime?   @db.Timestamptz(6)
+  lastCommentedAt   DateTime?   @db.Timestamptz(6)
+  contentType       String      @db.VarChar(30)
+  content           Json?       @default("{\"body\": \"\"}")
+  hasRioterComments Boolean     @default(false)
+  Application       Application @relation(fields: [applicationId], references: [id])
+  Users             User?       @relation(fields: [userId], references: [id])
+  Comments          Comment[]
+  Content           Content[]
+
+  @@index([id], type: Hash)
+  @@index([applicationId], type: Hash)
+  @@index([lastCommentedAt(sort: Desc), createdAt(sort: Desc)])
+  @@map("Discussions")
+}
+
+model Content {
+  id           Int        @id @default(autoincrement())
+  commentId    String?    @db.VarChar
+  discussionId String     @db.VarChar(15)
+  createdAt    DateTime   @db.Timestamptz(6)
+  isRiotPost   Boolean    @default(false)
+  userId       String
+  Comment      Comment?   @relation(fields: [discussionId, commentId], references: [threadId, id])
+  Discussion   Discussion @relation(fields: [discussionId], references: [id])
+  User         User       @relation(fields: [userId], references: [id])
+
+  @@index([createdAt(sort: Desc)])
+}
+
+model User {
+  id          String       @id
+  name        String?      @db.VarChar(50)
+  level       Int          @default(1)
+  icon        Int          @default(0)
+  region      String       @db.VarChar(5)
+  isModerator Boolean      @default(false)
+  isRioter    Boolean      @default(false)
+  banEndsAt   DateTime?    @db.Timestamptz(6)
+  modifiedAt  DateTime?    @db.Timestamptz(6)
+  createdAt   DateTime     @db.Timestamptz(6)
+  Comments    Comment[]
+  Content     Content[]
+  Discussions Discussion[]
+
+  @@index([id], type: Hash)
+  @@map("Users")
+}
