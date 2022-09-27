@@ -74,12 +74,13 @@ model Content {
   discussionId String     @db.VarChar(15)
   createdAt    DateTime   @db.Timestamptz(6)
   isRiotPost   Boolean    @default(false)
-  userId       String
+  userId       String?
   Comment      Comment?   @relation(fields: [discussionId, commentId], references: [threadId, id])
   Discussion   Discussion @relation(fields: [discussionId], references: [id])
-  User         User       @relation(fields: [userId], references: [id])
+  User         User?       @relation(fields: [userId], references: [id])
 
   @@index([createdAt(sort: Desc)])
+  @@index([userId], type: Hash)
 }
 
 model User {
